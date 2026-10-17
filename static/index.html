@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <title>Orbit — AI chat</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #20253a;
+      background: #f7f8fc;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      --muted: #7c8298;
+      --line: #e9eaf1;
+      --purple: #6858d8;
+      --purple-dark: #5747c6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 50% -20%, rgba(220, 216, 255, .58), transparent 43%),
+        #f7f8fc;
+    }
+
+    button, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      min-height: 100vh;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 32px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(226, 228, 237, .82);
+    }
+
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #8779f3, #5b4bcb);
+      color: white;
+      box-shadow: 0 5px 12px rgba(93, 76, 202, .2);
+    }
+    .brand-mark svg { width: 20px; height: 20px; }
+    .brand-name { font-size: 16px; font-weight: 720; letter-spacing: -.35px; }
+
+    .header-right { display: flex; align-items: center; gap: 18px; }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #38b980;
+      box-shadow: 0 0 0 3px rgba(56, 185, 128, .12);
+    }
+    .status.offline .status-dot { background: #e1a43b; box-shadow: 0 0 0 3px rgba(225, 164, 59, .13); }
+
+    .clear-button {
+      border: 0;
+      background: transparent;
+      color: #777d91;
+      padding: 8px 10px;
+      border-radius: 9px;
+      font-size: 12px;
+    }
+    .clear-button:hover { color: #302b53; background: #eeedf8; }
+
+    main {
+      width: 100%;
+      max-width: 720px;
+      flex: 1;
+      min-height: 0;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .welcome {
+      margin: auto 0;
+      padding: 56px 0 38px;
+      text-align: center;
+      animation: rise-in .45s ease both;
+    }
+    .welcome-icon {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 23px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #e7e4fb;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #f0eeff, #fff);
+      color: var(--purple);
+      box-shadow: 0 8px 24px rgba(62, 55, 122, .07);
+    }
+    .welcome-icon svg { width: 27px; height: 27px; }
+    h1 {
+      margin: 0;
+      font-size: clamp(27px, 4vw, 36px);
+      letter-spacing: -1.45px;
+      line-height: 1.2;
+      font-weight: 720;
+    }
+    .subtitle {
+      margin: 12px auto 29px;
+      max-width: 440px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .suggestions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      text-align: left;
+    }
+    .suggestion {
+      min-height: 76px;
+      border: 1px solid #e8e9f0;
+      border-radius: 14px;
+      padding: 13px 14px;
+      background: rgba(255, 255, 255, .8);
+      color: #535970;
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: left;
+      transition: border-color .18s, transform .18s, box-shadow .18s;
+    }
+    .suggestion:hover {
+      border-color: #cbc5f4;
+      transform: translateY(-2px);
+      box-shadow: 0 7px 18px rgba(66, 56, 143, .07);
+    }
+    .suggestion strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #343950;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .messages {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 34px 3px 30px;
+      scrollbar-width: thin;
+      scrollbar-color: #d8d9e5 transparent;
+    }
+    .messages.active { display: block; }
+    .message {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin: 0 0 25px;
+      animation: rise-in .22s ease both;
+    }
+    .message.user { flex-direction: row-reverse; }
+    .avatar {
+      flex: 0 0 30px;
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: #ece9ff;
+      color: #6858d8;
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .message.user .avatar { background: #e6e9f0; color: #52596b; }
+    .bubble-wrap { max-width: min(83%, 580px); }
+    .message.user .bubble-wrap { text-align: right; }
+    .speaker {
+      display: block;
+      margin: 1px 0 7px;
+      color: #888da0;
+      font-size: 11px;
+    }
+    .bubble {
+      display: inline-block;
+      padding: 12px 15px;
+      border: 1px solid #e9eaf1;
+      border-radius: 4px 15px 15px 15px;
+      background: #fff;
+      color: #373c50;
+      font-size: 13px;
+      line-height: 1.7;
+      text-align: left;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      box-shadow: 0 2px 8px rgba(40, 44, 70, .025);
+    }
+    .message.user .bubble {
+      border-color: #6858d8;
+      border-radius: 15px 4px 15px 15px;
+      background: linear-gradient(145deg, #7566e4, #6252d1);
+      color: white;
+    }
+    .message.error .bubble { border-color: #f0d3d3; background: #fff8f8; color: #963f43; }
+    .typing { color: #777d91; }
+    .typing::after {
+      content: " ";
+      display: inline-block;
+      width: 16px;
+      animation: dots 1.2s steps(4, end) infinite;
+    }
+
+    .composer-wrap { padding: 15px 0 12px; }
+    .composer {
+      padding: 11px 12px 9px 17px;
+      border: 1px solid #e2e3ec;
+      border-radius: 17px;
+      background: rgba(255, 255, 255, .94);
+      box-shadow: 0 8px 28px rgba(41, 43, 75, .065), 0 1px 3px rgba(41, 43, 75, .04);
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .composer:focus-within {
+      border-color: #bcb4ef;
+      box-shadow: 0 8px 28px rgba(73, 62, 160, .09), 0 0 0 3px rgba(104, 88, 216, .07);
+    }
+    textarea {
+      width: 100%;
+      min-height: 32px;
+      max-height: 150px;
+      resize: none;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #272b3d;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    textarea::placeholder { color: #a0a4b3; }
+    .composer-actions { display: flex; align-items: center; justify-content: space-between; }
+    .hint { color: #a0a4b3; font-size: 10px; }
+    .send-button {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 11px;
+      background: var(--purple);
+      color: white;
+      box-shadow: 0 3px 8px rgba(93, 76, 202, .22);
+      transition: background .18s, transform .18s, opacity .18s;
+    }
+    .send-button:hover:not(:disabled) { background: var(--purple-dark); transform: translateY(-1px); }
+    .send-button:disabled { cursor: wait; opacity: .55; }
+    .send-button svg { width: 16px; height: 16px; }
+    .footnote { margin: 9px 0 0; color: #a4a8b6; font-size: 10px; text-align: center; }
+
+    @keyframes rise-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75%, 100% { content: "..."; } }
+
+    @media (max-width: 600px) {
+      .app { padding: 0 17px; }
+      header { height: 64px; }
+      .header-right { gap: 8px; }
+      .status { font-size: 0; gap: 0; }
+      .status-dot { width: 8px; height: 8px; }
+      .welcome { padding: 40px 0 28px; }
+      .welcome-icon { width: 52px; height: 52px; margin-bottom: 19px; border-radius: 18px; }
+      .subtitle { margin: 10px auto 23px; font-size: 13px; }
+      .suggestions { grid-template-columns: 1fr; gap: 8px; }
+      .suggestion { min-height: auto; padding: 11px 13px; }
+      .suggestion strong { display: inline; margin-right: 5px; }
+      .messages { padding-top: 25px; }
+      .message { gap: 9px; margin-bottom: 21px; }
+      .bubble-wrap { max-width: 88%; }
+      .composer-wrap { padding-bottom: 10px; }
+      .composer { border-radius: 15px; padding-left: 13px; }
+      .hint { font-size: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand" aria-label="Orbit AI chat">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 14.1 9.9 20.5 12l-6.4 2.1L12 20.5l-2.1-6.4L3.5 12l6.4-2.1L12 3.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m19 3 .7 2.3L22 6l-2.3.7L19 9l-.7-2.3L16 6l2.3-.7L19 3Z" fill="currentColor"/></svg>
+        </div>
+        <span class="brand-name">Orbit</span>
+      </div>
+      <div class="header-right">
+        <div id="service-status" class="status" role="status"><span class="status-dot"></span><span id="status-label">Connecting</span></div>
+        <button id="clear-chat" class="clear-button" type="button">New chat</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+        <div class="welcome-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 14.1 9.9 20.5 12l-6.4 2.1L12 20.5l-2.1-6.4L3.5 12l6.4-2.1L12 3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m19 3 .7 2.3L22 6l-2.3.7L19 9l-.7-2.3L16 6l2.3-.7L19 3Z" fill="currentColor"/></svg>
+        </div>
+        <h1 id="welcome-title">A little more clarity,<br>one chat away.</h1>
+        <p class="subtitle">Ask a question, explore an idea, or get a hand with something you’re working on.</p>
+        <div class="suggestions" aria-label="Suggested prompts">
+          <button class="suggestion" type="button" data-prompt="Explain a tricky idea in simple terms"><strong>Make it simple</strong>Explain a tricky idea in simple terms</button>
+          <button class="suggestion" type="button" data-prompt="Help me brainstorm creative ideas for a weekend project"><strong>Brainstorm</strong>Find a fresh angle for your next idea</button>
+          <button class="suggestion" type="button" data-prompt="Help me write a clear, friendly email about rescheduling a meeting"><strong>Help me write</strong>Get a first draft started</button>
+        </div>
+      </section>
+
+      <section id="messages" class="messages" aria-label="Chat conversation" aria-live="polite"></section>
+
+      <div class="composer-wrap">
+        <form id="chat-form" class="composer">
+          <label for="prompt" class="visually-hidden"></label>
+          <textarea id="prompt" name="prompt" rows="1" maxlength="12000" placeholder="Message Orbit..." aria-label="Your message" required></textarea>
+          <div class="composer-actions">
+            <span class="hint">Enter to send · Shift + Enter for a new line</span>
+            <button id="send" class="send-button" type="submit" aria-label="Send message">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 11.5 19 5l-4.8 14-3-5.4-6.7-2.1Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m11.2 13.6 4.1-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </form>
+        <p class="footnote">Orbit can make mistakes. Check important information.</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const form = document.querySelector("#chat-form");
+    const input = document.querySelector("#prompt");
+    const sendButton = document.querySelector("#send");
+    const messages = document.querySelector("#messages");
+    const welcome = document.querySelector("#welcome");
+    const status = document.querySelector("#service-status");
+    const statusLabel = document.querySelector("#status-label");
+    const history = [];
+    let busy = false;
+
+    function setServiceStatus(online) {
+      status.classList.toggle("offline", !online);
+      statusLabel.textContent = online ? "Ready to chat" : "Service unavailable";
+    }
+
+    async function checkHealth() {
+      try {
+        const response = await fetch("/health");
+        setServiceStatus(response.ok);
+      } catch {
+        setServiceStatus(false);
+      }
+    }
+
+    function addMessage(role, text, extraClass = "") {
+      const row = document.createElement("article");
+      row.className = `message ${role} ${extraClass}`.trim();
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.setAttribute("aria-hidden", "true");
+      avatar.textContent = role === "user" ? "You" : "O";
+
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap";
+      const speaker = document.createElement("span");
+      speaker.className = "speaker";
+      speaker.textContent = role === "user" ? "You" : "Orbit";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+      wrap.append(speaker, bubble);
+      row.append(avatar, wrap);
+      messages.append(row);
+      messages.scrollTop = messages.scrollHeight;
+      return row;
+    }
+
+    function makePrompt(currentMessage) {
+      const maxContext = 18000;
+      const lines = [];
+      let used = currentMessage.length;
+      for (let i = history.length - 1; i >= 0; i--) {
+        const entry = history[i];
+        const line = `${entry.role === "user" ? "User" : "Assistant"}: ${entry.text}`;
+        if (used + line.length + 40 > maxContext) break;
+        lines.unshift(line);
+        used += line.length + 1;
+      }
+      if (lines.length === 0) return currentMessage;
+      return `Continue this conversation using the recent context below.\n\n${lines.join("\n")}\n\nUser: ${currentMessage}`;
+    }
+
+    async function sendMessage(text) {
+      const message = text.trim();
+      if (!message || busy) return;
+
+      busy = true;
+      welcome.hidden = true;
+      messages.classList.add("active");
+      addMessage("user", message);
+      history.push({ role: "user", text: message });
+      input.value = "";
+      input.style.height = "auto";
+      sendButton.disabled = true;
+      input.disabled = true;
+      const pending = addMessage("assistant", "Thinking", "pending");
+      pending.querySelector(".bubble").classList.add("typing");
+
+      try {
+        const response = await fetch("/api/run-automation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ task_name: "Chat", user_prompt: makePrompt(message) })
+        });
+        const body = await response.json().catch(() => ({}));
+        pending.remove();
+        if (!response.ok) {
+          const detail = typeof body.detail === "string"
+            ? body.detail
+            : "The request was not accepted. Check the message and try again.";
+          addMessage("assistant", detail, "error");
+          setServiceStatus(response.status !== 503);
+          return;
+        }
+        const answer = body.result || "The model returned an empty response.";
+        addMessage("assistant", answer);
+        history.push({ role: "assistant", text: answer });
+        setServiceStatus(true);
+      } catch {
+        pending.remove();
+        addMessage("assistant", "Could not reach the app. Check that the server is running, then try again.", "error");
+        setServiceStatus(false);
+      } finally {
+        busy = false;
+        sendButton.disabled = false;
+        input.disabled = false;
+        input.focus();
+      }
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      sendMessage(input.value);
+    });
+
+    input.addEventListener("input", () => {
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, 150)}px`;
+    });
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    document.querySelectorAll(".suggestion").forEach(button => {
+      button.addEventListener("click", () => sendMessage(button.dataset.prompt || ""));
+    });
+
+    document.querySelector("#clear-chat").addEventListener("click", () => {
+      if (busy) return;
+      history.length = 0;
+      messages.replaceChildren();
+      messages.classList.remove("active");
+      welcome.hidden = false;
+      input.value = "";
+      input.focus();
+    });
+
+    checkHealth();
+  </script>
+</body>
+</html>
